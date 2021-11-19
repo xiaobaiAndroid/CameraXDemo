@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/permissionsFragment">
+
+
+    <fragment
+        android:id="@+id/camera_fragment"
+        android:name="com.bzf.cameraxdemo.fragments.CameraFragment"
+        android:label="CameraFragment">
+        <action
+            android:id="@+id/action_cameraFragment_to_permissionsFragment"
+            app:destination="@id/permissionsFragment"
+            app:enterAnim="@android:anim/fade_in"
+            app:exitAnim="@android:anim/fade_out"
+            app:popEnterAnim="@android:anim/fade_in"
+            app:popExitAnim="@android:anim/fade_out"
+            app:popUpTo="@id/camera_fragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_cameraFragment_to_galleryFragment3"
+            app:destination="@id/galleryFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/galleryFragment"
+        android:name="com.bzf.cameraxdemo.GalleryFragment"
+        android:label="gallery_fragment"
+        tools:layout="@layout/gallery_fragment" />
+    <fragment
+        android:id="@+id/permissionsFragment"
+        android:name="com.bzf.cameraxdemo.fragments.PermissionsFragment"
+        android:label="fragment_permissions">
+        <action
+            android:id="@+id/action_permissionsFragment_to_cameraFragment"
+            app:destination="@id/camera_fragment"
+            app:popUpTo="@id/permissionsFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+</navigation>
