@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.Configuration
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.hardware.display.DisplayManager
 import android.media.MediaScannerConnection
 import android.net.Uri
@@ -18,7 +20,6 @@ import android.view.ViewGroup
 import android.webkit.MimeTypeMap
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.compose.ui.text.toUpperCase
 import androidx.core.content.ContextCompat
 import androidx.core.net.toFile
 import androidx.core.view.setPadding
@@ -29,18 +30,17 @@ import androidx.navigation.Navigation
 import androidx.window.layout.WindowMetricsCalculator
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
-import com.bzf.cameraxdemo.EXTENSION_WHITELIST
 import com.bzf.cameraxdemo.KEY_EVENT_ACTION
 import com.bzf.cameraxdemo.R
 import com.bzf.cameraxdemo.analyzer.LuminosityAnalyzer
 import com.bzf.cameraxdemo.databinding.CameraUiContainerBinding
 import com.bzf.cameraxdemo.databinding.FragmentCameraBinding
+import com.bzf.cameraxdemo.utils.ANIMATION_SLOW_MILLIS
 import com.bzf.cameraxdemo.utils.AppFileUtils
 import com.bzf.cameraxdemo.utils.simulateClick
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
-import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -73,10 +73,10 @@ class CameraFragment : Fragment() {
     }
 
     //使用音量键－进行拍照
-    private val volumeDownReceiver = object: BroadcastReceiver(){
+    private val volumeDownReceiver = object : BroadcastReceiver() {
 
         override fun onReceive(context: Context?, intent: Intent) {
-            when(intent.getIntExtra(KEY_EVENT_ACTION, KeyEvent.KEYCODE_UNKNOWN)){
+            when (intent.getIntExtra(KEY_EVENT_ACTION, KeyEvent.KEYCODE_UNKNOWN)) {
                 KeyEvent.KEYCODE_VOLUME_DOWN -> {
                     cameraUiContainerBinding?.cameraCaptureButton?.simulateClick()
                 }
@@ -84,14 +84,14 @@ class CameraFragment : Fragment() {
         }
     }
 
-    private val displayListener = object: DisplayManager.DisplayListener{
+    private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) = Unit
         override fun onDisplayRemoved(displayId: Int) = Unit
         override fun onDisplayChanged(displayId: Int) = view?.let { view ->
             Log.d(TAG, "屏幕旋转：${view.display.rotation}")
             imageCapture?.targetRotation = view.display.rotation
             imageAnalyzer?.targetRotation = view.display.rotation
-        }?: Unit
+        } ?: Unit
     }
 
     override fun onCreateView(
@@ -115,9 +115,9 @@ class CameraFragment : Fragment() {
         broadcastManager = LocalBroadcastManager.getInstance(view.context)
 
         val intentFilter = IntentFilter().apply { addAction(KEY_EVENT_ACTION) }
-        broadcastManager.registerReceiver(volumeDownReceiver,intentFilter)
+        broadcastManager.registerReceiver(volumeDownReceiver, intentFilter)
 
-        displayManager.registerDisplayListener(displayListener,null)
+        displayManager.registerDisplayListener(displayListener, null)
 
 
         //等待布局初始化后，再初始化拍照预览窗口
@@ -194,31 +194,44 @@ class CameraFragment : Fragment() {
                 val outputOptions =
                     ImageCapture.OutputFileOptions.Builder(photoFile).setMetadata(metadata).build()
 
-                imageCapture.takePicture(outputOptions, cameraExecutor, object: ImageCapture.OnImageSavedCallback{
-                    override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                        val saveUri = outputFileResults.savedUri ?: Uri.fromFile(photoFile)
-                        Log.d(TAG, "照片拍摄成功：$saveUri")
+                imageCapture.takePicture(
+                    outputOptions,
+                    cameraExecutor,
+                    object : ImageCapture.OnImageSavedCallback {
+                        override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                            val saveUri = outputFileResults.savedUri ?: Uri.fromFile(photoFile)
+                            Log.d(TAG, "照片拍摄成功：$saveUri")
 
-                        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){ //判断设备android版本是否大于等于6.0
-                            setGalleryThumbnail(saveUri)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { //判断设备android版本是否大于等于6.0
+                                setGalleryThumbnail(saveUri)
+                            }
+
+                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {//判断设备android版本是否小于7.0
+                                requireActivity().sendBroadcast(
+                                    Intent(
+                                        android.hardware.Camera.ACTION_NEW_PICTURE,
+                                        saveUri
+                                    )
+                                )
+                            }
+
+                            val mimeType = MimeTypeMap.getSingleton()
+                                .getMimeTypeFromExtension(saveUri.toFile().extension)
+                            //扫描指定路径和MIME(媒体)类型的文件
+                            MediaScannerConnection.scanFile(
+                                context,
+                                arrayOf(saveUri.toFile().absolutePath),
+                                arrayOf(mimeType)
+                            ) { path, uri ->
+                                Log.d(TAG, "拍摄的照片保存的媒体目录： $uri")
+                            }
                         }
 
-                        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.N){//判断设备android版本是否小于7.0
-                            requireActivity().sendBroadcast(Intent(android.hardware.Camera.ACTION_NEW_PICTURE, saveUri))
+                        override fun onError(exception: ImageCaptureException) {
+                            Log.e(TAG, "拍照失败：${exception.message}", exception)
                         }
-
-                        val mimeType = MimeTypeMap.getSingleton()
-                            .getMimeTypeFromExtension(saveUri.toFile().extension)
-                        //扫描指定路径和MIME(媒体)类型的文件
-                        MediaScannerConnection.scanFile(context, arrayOf(saveUri.toFile().absolutePath), arrayOf(mimeType)){ path, uri ->
-                            Log.d(TAG, "拍摄的照片保存的媒体目录： $uri")
-                        }
-                    }
-
-                    override fun onError(exception: ImageCaptureException) {
-                        Log.e(TAG, "拍照失败：${exception.message}", exception)
-                    }
-                })
+                    })
+                setupTakePhotoAnimation()
             }
         }
 
@@ -227,17 +240,37 @@ class CameraFragment : Fragment() {
             it.isEnabled = false
 
             it.setOnClickListener {
-                lensFacing = if (CameraSelector.LENS_FACING_FRONT == lensFacing){
+                lensFacing = if (CameraSelector.LENS_FACING_FRONT == lensFacing) {
                     CameraSelector.LENS_FACING_BACK
-                }else{
+                } else {
                     CameraSelector.LENS_FACING_FRONT
                 }
                 bindCameraUseCases()
             }
         }
 
-        cameraUiContainerBinding?.photoViewButton?.let {
+        cameraUiContainerBinding?.photoViewButton?.setOnClickListener {
+            if (true == outputDirectory.listFiles()?.isNotEmpty()) {
+                Navigation.findNavController(requireActivity(), R.id.nav_host_fragment)
+                    .navigate(CameraFragmentDirections.actionCameraToGallery(outputDirectory.absolutePath))
+            }
+        }
 
+    }
+
+    /*
+    * @describe: 设备Android版本大于6.0前台才是可绘制的
+    * @date: 2021/11/20
+    */
+    private fun setupTakePhotoAnimation() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            //显示闪光动画，表示拍照成功
+            fragmentCameraBinding.root.postDelayed({
+                fragmentCameraBinding.root.foreground = ColorDrawable(Color.WHITE)
+                fragmentCameraBinding.root.postDelayed({
+                    fragmentCameraBinding.root.foreground = null
+                }, ANIMATION_SLOW_MILLIS)
+            }, ANIMATION_SLOW_MILLIS)
         }
     }
 
@@ -268,7 +301,7 @@ class CameraFragment : Fragment() {
     * @describe: 设置图库的缩略图
     * @date: 2021/11/19
     */
-    private fun setGalleryThumbnail(uri: Uri){
+    private fun setGalleryThumbnail(uri: Uri) {
         cameraUiContainerBinding?.photoViewButton?.let { photoViewButton ->
             photoViewButton.post {
                 photoViewButton.setPadding(resources.getDimension(R.dimen.stroke_small).toInt())
@@ -342,15 +375,14 @@ class CameraFragment : Fragment() {
     }
 
     //启用或禁用切换相机按钮
-    private fun updateCameraSwitchButton(){
+    private fun updateCameraSwitchButton() {
         try {
-            cameraUiContainerBinding?.cameraSwitchButton?.isEnabled = hasBackCamera() && hasFrontCamera()
-        } catch (exception: CameraInfoUnavailableException){
+            cameraUiContainerBinding?.cameraSwitchButton?.isEnabled =
+                hasBackCamera() && hasFrontCamera()
+        } catch (exception: CameraInfoUnavailableException) {
             cameraUiContainerBinding?.cameraSwitchButton?.isEnabled = false
         }
     }
-
-
 
 
     /*计算最合适的预览比例 4:3, 16:9*/

@@ -20,14 +20,23 @@
             app:popUpTo="@id/camera_fragment"
             app:popUpToInclusive="true" />
         <action
-            android:id="@+id/action_cameraFragment_to_galleryFragment3"
+            android:id="@+id/action_camera_to_gallery"
             app:destination="@id/galleryFragment" />
     </fragment>
     <fragment
         android:id="@+id/galleryFragment"
-        android:name="com.bzf.cameraxdemo.GalleryFragment"
-        android:label="gallery_fragment"
-        tools:layout="@layout/gallery_fragment" />
+        android:name="com.bzf.cameraxdemo.fragments.GalleryFragment"
+        android:label="GalleryFragment"
+        tools:layout="@layout/fragment_gallery">
+
+        <argument
+            android:name="root_directory"
+            app:argType="string"
+            />
+
+    </fragment>
+
+
     <fragment
         android:id="@+id/permissionsFragment"
         android:name="com.bzf.cameraxdemo.fragments.PermissionsFragment"

@@ -13,6 +13,10 @@
     <string name="capture_mode_hdr">HDR</string>
     <string name="capture_mode_night">Night</string>
     <string name="delete_button_alt">Delete</string>
-    <string name="delete_dialog">Delete current photo?</string>
     <string name="delete_title">Confirm</string>
+    <string name="my_share_photo">这是我分享的图片</string>
+    <string name="confirm">确认</string>
+    <string name="delete_curent_photo">删除当前照片？</string>
+    <string name="yes">是</string>
+    <string name="no">否</string>
 </resources>
